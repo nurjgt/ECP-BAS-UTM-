@@ -16,25 +16,41 @@ const API = (() => {
 
     // Seed or Update Superadmin account
     let _ops = _s(CONFIG.STORAGE_KEYS.OPERATORS);
-    let adminIndex = _ops.findIndex(o => o.email === 'admin@ecpbas.kz');
-    if (adminIndex === -1) {
-        _ops.push({
-            id: 'OP-ADMIN',
-            fullName: 'Системный Администратор',
-            email: 'admin@ecpbas.kz',
-            phone: '+77771234567',
-            iin: '010101000000',
-            citizenship: 'KZ',
-            password: 'Admin!2026_BAS_Secure',
-            role: 'superadmin',
-            photo: '',
-            createdAt: _ts()
-        });
-    } else {
-        _ops[adminIndex].password = 'Admin!2026_BAS_Secure';
-        _ops[adminIndex].role = 'superadmin';
+    let _certs = _s(CONFIG.STORAGE_KEYS.CERTIFICATES);
+    
+    function ensureUserAndCert(id, name, email, role, cat, score) {
+        let idx = _ops.findIndex(o => o.email === email);
+        if (idx === -1) {
+            _ops.push({
+                id: id, fullName: name, email: email, phone: '+77000000000',
+                iin: '000000000000', citizenship: 'KZ', password: 'Password!123',
+                role: role, photo: '', createdAt: _ts()
+            });
+        } else {
+            _ops[idx].password = 'Password!123';
+            _ops[idx].role = role;
+            _ops[idx].fullName = name;
+        }
+
+        if (cat && !_certs.find(c => c.operatorId === id && c.category === cat)) {
+            const now = new Date();
+            const exp = new Date(now);
+            exp.setFullYear(exp.getFullYear() + 2);
+            _certs.push({
+                id: 'CERT-' + id + '-' + cat, operatorId: id, category: cat,
+                categoryName: 'Категория ' + cat, score: score,
+                issuedAt: now.toISOString(), expiresAt: exp.toISOString(), status: 'active'
+            });
+        }
     }
+
+    ensureUserAndCert('OP-ADMIN', 'Системный Администратор', 'admin@ecpbas.kz', 'superadmin', null, 0);
+    // Seed new users requested
+    ensureUserAndCert('OP-ALIKHAN', 'Маратов Әлихан', 'alikhan@ecpbas.kz', 'operator', 'A1', 95);
+    ensureUserAndCert('OP-DASTAN', 'Дастан Мухаммедрахим', 'dastan@ecpbas.kz', 'operator', 'A2', 98);
+    
     _w(CONFIG.STORAGE_KEYS.OPERATORS, _ops);
+    _w(CONFIG.STORAGE_KEYS.CERTIFICATES, _certs);
 
 
     // ============ Auth ============
