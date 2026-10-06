@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЕЦП БАС — Единая Цифровая Платформа Беспилотных Авиационных Систем</title>
+    <meta name="description" content="Государственная информационная система учёта и управления беспилотными авиационными системами">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css?v=4.0">
+</head>
+<body>
+
+    <!-- ==================== LOGIN PAGE ==================== -->
+    <div id="page-login" class="login-page">
+        <div class="login-container">
+            <div class="login-header">
+                <svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="#4a7ab5" stroke-width="1.5">
+                    <circle cx="24" cy="24" r="22"/><circle cx="24" cy="24" r="16"/>
+                    <path d="M24 8 L24 40 M8 24 L40 24" stroke-width="0.8"/>
+                    <path d="M24 14 L20 22 L24 20 L28 22 Z" fill="#4a7ab5" stroke="none"/>
+                    <path d="M20 26 L28 26 L26 34 L22 34 Z" fill="#4a7ab5" stroke="none" opacity="0.6"/>
+                </svg>
+                <h1>ЕЦП БАС</h1>
+                <p>Единая Цифровая Платформа<br>Беспилотных Авиационных Систем</p>
+            </div>
+
+            <!-- Auth Method Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-method="email">Email</button>
+                <button class="auth-tab" data-method="phone">Телефон</button>
+                <button class="auth-tab" data-method="egov">eGov QR</button>
+                <button class="auth-tab" data-method="eds">ЭЦП (NCALayer)</button>
+            </div>
+
+            <!-- Email Login -->
+            <form id="form-login-email" class="auth-form active">
+                <div class="form-field"><label>Email</label><input type="email" id="login-email" class="form-control" required placeholder="operator@example.kz"></div>
+                <div class="form-field"><label>Пароль</label><input type="password" id="login-password" class="form-control" required placeholder="••••••••"></div>
+                <button type="submit" class="action-btn full-w">Войти</button>
+                <div class="auth-divider"><span>или</span></div>
+                <button type="button" class="secondary-btn full-w" id="btn-show-register">Зарегистрироваться</button>
+            </form>
+
+            <!-- Phone Login -->
+            <form id="form-login-phone" class="auth-form">
+                <div class="form-field"><label>Номер телефона</label><input type="tel" id="login-phone" class="form-control" required placeholder="+7 (7XX) XXX-XX-XX"></div>
+                <button type="button" class="action-btn full-w" id="btn-send-otp">Получить код</button>
+                <div id="otp-section" class="hidden">
+                    <div class="form-field"><label>Код подтверждения</label><input type="text" id="login-otp" class="form-control" maxlength="4" placeholder="0000"></div>
+                    <button type="submit" class="action-btn full-w">Подтвердить</button>
+                </div>
+            </form>
+
+            <!-- eGov QR -->
+            <div id="form-login-egov" class="auth-form">
+                <div class="egov-qr-area" id="egov-box" data-status="pending">
+                    <div class="egov-brand">
+                        <span class="egov-logo">eGov</span><span>mobile · вход по QR и ЭЦП</span>
+                    </div>
+
+                    <!-- Подписывающее лицо от своего имени -->
+                    <div class="egov-signer-box">
+                        <div class="signer-header">
+                            <span>Личность подписывающего:</span>
+                            <button type="button" class="btn-text-sm" id="btn-edit-egov-signer">Изменить свои ФИО/ИИН ✎</button>
+                        </div>
+                        <div class="signer-preview" id="egov-signer-preview">
+                            <strong id="egov-signer-name">Нұржігіт Сейітқалиұлы</strong> · ИИН: <span id="egov-signer-iin" class="mono">010515501234</span>
+                        </div>
+                        <div class="signer-edit-form hidden" id="egov-signer-form">
+                            <div class="form-row-2">
+                                <div class="form-field"><label>Ваше ФИО</label><input type="text" id="signer-fullname" class="form-control" placeholder="Иванов Иван"></div>
+                                <div class="form-field"><label>ИИН (12 цифр)</label><input type="text" id="signer-iin" class="form-control" maxlength="12" placeholder="010515501234"></div>
+                            </div>
+                            <div class="form-row-2">
+                                <div class="form-field"><label>Роль в системе</label><select id="signer-role" class="form-control"><option value="admin">Администратор ЕЦП</option><option value="operator">Оператор БАС</option></select></div>
+                                <div class="form-field"><label>Телефон</label><input type="tel" id="signer-phone" class="form-control" placeholder="+7 701 234 56 78"></div>
+                            </div>
+                            <button type="button" class="action-btn btn-xs" id="btn-save-egov-signer">✓ Применить данные для подписи</button>
+                        </div>
+                    </div>
+
+                    <div class="qr-frame">
+                        <div class="qr-placeholder" id="egov-qr-code"></div>
+                        <div class="qr-result"><div class="qr-check">✓</div></div>
+                    </div>
+                    <div id="egov-deeplink-box" style="text-align:center; margin:4px 0 8px;"></div>
+                    <div class="egov-meta">
+                        <div class="egov-ttl">
+                            <svg viewBox="0 0 40 40" width="34" height="34"><circle cx="20" cy="20" r="18" class="ttl-bg"/><circle cx="20" cy="20" r="18" class="ttl-fg" id="egov-ring" transform="rotate(-90 20 20)"/></svg>
+                            <div><span class="dim">Действителен</span><b id="egov-timer" class="mono">03:00</b></div>
+                        </div>
+                        <div class="egov-sid"><span class="dim">Сессия</span><b id="egov-sid" class="mono">—</b></div>
+                    </div>
+                    <div class="egov-status" id="egov-status">Ожидание сканирования…</div>
+                    <ol class="egov-steps">
+                        <li class="egov-step" data-step="pending">Откройте <b>eGov mobile</b> на телефоне → «QR»</li>
+                        <li class="egov-step" data-step="scanned">Наведите камеру на QR-код выше</li>
+                        <li class="egov-step" data-step="signing">Подтвердите подпись по FaceID/PIN в телефоне</li>
+                    </ol>
+                    <div class="egov-note-box">
+                        <div class="egov-note-icon">ℹ</div>
+                        <div class="egov-note-text">
+                            <strong>Официальный QR:</strong> Сгенерирован через национальный шлюз eGov mobile. Отсканируйте камерой приложения <em>eGov mobile</em> для входа с телефона, либо нажмите кнопку ниже для локального входа от своего имени:
+                        </div>
+                    </div>
+                    <div class="egov-actions">
+                        <button type="button" class="secondary-btn" id="btn-egov-refresh">↻ Обновить QR</button>
+                        <button type="button" class="action-btn" id="btn-egov-simulate">▶ Подписать через eGov QR</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EDS / NCALayer Login -->
+            <div id="form-login-eds" class="auth-form">
+                <div class="eds-auth-container">
+                    <div class="nca-status-card" id="nca-status-card">
+                        <div class="nca-status-icon online" id="nca-status-dot">●</div>
+                        <div class="nca-status-info">
+                            <strong id="nca-status-title">Проверка NCALayer…</strong>
+                            <span id="nca-status-sub">wss://127.0.0.1:13579/</span>
+                        </div>
+                        <button type="button" class="secondary-btn btn-xs" id="btn-nca-retry">↻ Проверить</button>
+                    </div>
+
+                    <!-- Certificate Display Card -->
+                    <div class="eds-cert-card hidden" id="eds-cert-card">
+                        <div class="cert-card-badge">ЭЦП НУЦ РК · ГОСТ / RSA</div>
+                        <div class="cert-grid">
+                            <div><span class="dim">Владелец:</span><b id="eds-cert-cn">—</b></div>
+                            <div><span class="dim">ИИН:</span><b id="eds-cert-iin" class="mono">—</b></div>
+                            <div id="eds-cert-org-row"><span class="dim">Организация:</span><b id="eds-cert-org">—</b></div>
+                            <div><span class="dim">Срок действия:</span><span id="eds-cert-valid">—</span></div>
+                        </div>
+                        <button type="button" class="action-btn full-w" id="btn-login-with-cert">✓ Войти в ЕЦП БАС под этим ключом</button>
+                    </div>
+
+                    <!-- Main actions -->
+                    <div class="eds-actions-block" id="eds-actions-block">
+                        <button type="button" class="action-btn full-w eds-btn-primary" id="btn-nca-browse">
+                            <span class="btn-icon">🔏</span> Выбрать ключ ЭЦП (.p12) через NCALayer
+                        </button>
+                        <div class="eds-divider"><span>или альтернативные способы</span></div>
+                        <div class="eds-row-buttons">
+                            <label class="secondary-btn eds-file-label" id="lbl-eds-file" title="Выбрать файл ключа с диска">
+                                📁 Выбрать .p12 файл
+                                <input type="file" id="eds-file-input" accept=".p12,.pfx" style="display:none;">
+                            </label>
+                            <button type="button" class="secondary-btn" id="btn-eds-custom-toggle">
+                                ✍ Подписать от своего имени
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Name Form for EDS -->
+                    <div class="eds-custom-form hidden" id="eds-custom-form">
+                        <div class="form-row-2">
+                            <div class="form-field"><label>Ваше ФИО *</label><input type="text" id="eds-custom-name" class="form-control" placeholder="Нұржігіт Сейітқалиұлы"></div>
+                            <div class="form-field"><label>Ваш ИИН *</label><input type="text" id="eds-custom-iin" class="form-control" maxlength="12" placeholder="010515501234"></div>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="form-field"><label>Организация / Ведомство</label><input type="text" id="eds-custom-org" class="form-control" placeholder="АО «КазАэроНавигация» / Частное лицо"></div>
+                            <div class="form-field"><label>Роль</label><select id="eds-custom-role" class="form-control"><option value="admin">Администратор ЕЦП</option><option value="operator">Оператор БАС</option></select></div>
+                        </div>
+                        <button type="button" class="action-btn full-w" id="btn-eds-custom-login">🔏 Подписать и войти в систему</button>
+                    </div>
+
+                    <div class="eds-help-note">
+                        Локальный агент <strong>NCALayer</strong> позволяет использовать официальные ключи НУЦ РК (PKCS#12) с персональным ИИН без передачи закрытого ключа.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Form -->
+            <form id="form-register" class="auth-form">
+                <h3>Регистрация оператора</h3>
+                <div class="form-field"><label>ФИО *</label><input type="text" id="reg-fullname" class="form-control" required placeholder="Иванов Иван Иванович"></div>
+                <div class="form-grid-2">
+                    <div class="form-field"><label>Email *</label><input type="email" id="reg-email" class="form-control" required></div>
+                    <div class="form-field"><label>Телефон</label><input type="tel" id="reg-phone" class="form-control" placeholder="+7..."></div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-field"><label>ИИН</label><input type="text" id="reg-iin" class="form-control" maxlength="12" placeholder="123456789012"></div>
+                    <div class="form-field">
+                        <label>Гражданство *</label>
+                        <select id="reg-citizenship" class="form-control">
+                            <option value="KZ">Республика Казахстан</option>
+                            <option value="FOREIGN">Иностранный гражданин</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-field"><label>Пароль *</label><input type="password" id="reg-password" class="form-control" required minlength="6"></div>
+                <button type="submit" class="action-btn full-w">Создать аккаунт</button>
+                <button type="button" class="text-btn" id="btn-back-login">← Уже есть аккаунт</button>
+            </form>
+
+            <div id="auth-error" class="auth-error hidden"></div>
+            <div class="login-footer">ГИС-БАС-2026-001 | ГОСТ Р 34.12-2015</div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP SHELL ==================== -->
+    <div id="app-shell" class="hidden">
+
+        <!-- Classification Banner -->
+        <div id="classification-banner"><span id="sys-classification"></span></div>
+
+        <!-- Header -->
+        <header id="system-header">
+            <div class="header-left">
+                <div class="header-emblem">
+                    <svg viewBox="0 0 48 48" width="36" height="36" fill="none" stroke="#4a7ab5" stroke-width="1.5">
+                        <circle cx="24" cy="24" r="22"/><circle cx="24" cy="24" r="16"/>
+                        <path d="M24 8 L24 40 M8 24 L40 24" stroke-width="0.8"/>
+                        <path d="M24 14 L20 22 L24 20 L28 22 Z" fill="#4a7ab5" stroke="none"/>
+                    </svg>
+                </div>
+                <div class="header-text">
+                    <div class="header-title">ЕДИНАЯ ЦИФРОВАЯ ПЛАТФОРМА БАС</div>
+                    <div class="header-subtitle">Государственная ИС учёта и управления БАС</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-user">
+                    <span id="user-display-name">—</span>
+                    <span class="user-id mono" id="user-display-id">—</span>
+                </div>
+                <div class="header-session">
+                    <span id="header-datetime">—</span>
+                    <button class="nav-btn" id="btn-logout" title="Выйти">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav id="main-nav">
+            <a href="#" class="nav-tab active" data-page="dashboard">Дашборд</a>
+            <a href="#" class="nav-tab" data-page="profile">Профиль</a>
+            <a href="#" class="nav-tab" data-page="registry">Мои БАС</a>
+            <a href="#" class="nav-tab" data-page="bookings-list">Мои бронирования</a>
+            <a href="#" class="nav-tab" data-page="exam">Экзамен</a>
+            <a href="#" class="nav-tab admin-only" data-page="admin">Администрирование</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="content">
+
+            <!-- ==================== DASHBOARD (MAP + BOOKING) ==================== -->
+            <section id="page-dashboard" class="page active">
+                <div class="dashboard-layout">
+                    <div class="dash-map-area">
+                        <div id="dash-map"></div>
+                        <!-- Region navigator -->
+                        <div class="region-nav" id="region-nav"></div>
+                        <!-- Base layer switch -->
+                        <div class="base-switch" id="base-switch"></div>
+                        <!-- Demo -->
+                        <button class="demo-toggle" id="btn-demo"><span class="demo-dot"></span>Демо: мониторинг бортов</button>
+                        <div class="demo-panel hidden" id="demo-panel">
+                            <div class="dp-head"><span class="dp-badge">ДЕМО</span>Симуляция · данные не сохраняются</div>
+                            <div class="dd-row dd-hdr"><span>Борт</span><span>Зона</span><span>H</span><span>Статус</span></div>
+                            <div id="demo-list"></div>
+                            <div class="dp-feed-title">События геозоны</div>
+                            <div id="demo-feed" class="dp-feed"></div>
+                        </div>
+                        <!-- HUD overlay -->
+                        <div class="map-hud">
+                            <div class="hud-stats">
+                                <div class="hud-stat"><span class="hud-val" id="hud-active">0</span><span class="hud-lbl">В воздухе</span></div>
+                                <div class="hud-stat"><span class="hud-val" id="hud-booked">0</span><span class="hud-lbl">Забронировано</span></div>
+                                <div class="hud-stat"><span class="hud-val" id="hud-zones">0</span><span class="hud-lbl">Зон</span></div>
+                            </div>
+                            <div class="hud-legend">
+                                <span class="hud-lg"><i style="background:#38a169"></i>Свободно</span>
+                                <span class="hud-lg"><i style="background:#d69e2e"></i>Занято</span>
+                                <span class="hud-lg"><i style="background:#e53e3e"></i>Гос. бронь</span>
+                                <span class="hud-lg"><i style="background:#ed8936"></i>Согласование</span>
+                                <span class="hud-lg"><i style="background:#4299e1"></i>Моя бронь</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dash-sidebar">
+                        <div class="sidebar-head">БРОНИРОВАНИЕ ВОЗДУШНОГО ПРОСТРАНСТВА</div>
+                        <form id="booking-form">
+                            <div class="form-field">
+                                <label>Зона полёта *</label>
+                                <select id="bk-zone" class="form-control" required><option value="">— выберите или кликните на карте —</option></select>
+                            </div>
+                            <div class="form-field"><label>Дата и время начала *</label><input type="datetime-local" id="bk-start" class="form-control" required></div>
+                            <div class="form-field"><label>Дата и время окончания *</label><input type="datetime-local" id="bk-end" class="form-control" required></div>
+                            <div class="form-field">
+                                <label>Борт (БАС) *</label>
+                                <select id="bk-drone" class="form-control" required><option value="">— выберите —</option></select>
+                            </div>
+                            <div class="form-field"><label>Макс. высота, м AGL</label><input type="number" id="bk-altitude" class="form-control" value="120"></div>
+                            <div class="form-field">
+                                <label>Цель полёта *</label>
+                                <select id="bk-purpose" class="form-control" required><option value="">— выберите —</option></select>
+                            </div>
+                            <div id="bk-conflict-result" class="conflict-result"></div>
+                            <div class="form-actions-col">
+                                <button type="button" class="secondary-btn full-w" id="btn-check-conflict">Проверить доступность</button>
+                                <button type="submit" class="action-btn full-w" id="btn-book" disabled>Забронировать</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== PROFILE ==================== -->
+            <section id="page-profile" class="page">
+                <div class="section-title-bar"><h2>ПРОФИЛЬ ОПЕРАТОРА</h2></div>
+                <div class="profile-layout">
+                    <div class="profile-card">
+                        <div class="profile-avatar" id="profile-avatar">OP</div>
+                        <h3 id="profile-name">—</h3>
+                        <div class="profile-id mono" id="profile-id">—</div>
+                        <div class="profile-meta">
+                            <div><span class="dim">Email:</span> <span id="profile-email">—</span></div>
+                            <div><span class="dim">Телефон:</span> <span id="profile-phone">—</span></div>
+                            <div><span class="dim">Гражданство:</span> <span id="profile-citizenship">—</span></div>
+                            <div><span class="dim">ИИН:</span> <span id="profile-iin" class="mono">—</span></div>
+                            <div><span class="dim">Дата регистрации:</span> <span id="profile-created">—</span></div>
+                        </div>
+                    </div>
+                    <div class="profile-details">
+                        <!-- Certificates -->
+                        <div class="data-panel">
+                            <div class="panel-header"><span class="panel-title">СЕРТИФИКАТЫ</span></div>
+                            <div class="panel-body">
+                                <table class="data-table" id="certs-table"><thead><tr><th>ID</th><th>Категория</th><th>Баллы</th><th>Выдан</th><th>Действует до</th><th>Статус</th></tr></thead><tbody id="certs-tbody"></tbody></table>
+                                <div class="empty-state" id="certs-empty">Нет сертификатов. Сдайте экзамен для получения.</div>
+                            </div>
+                        </div>
+                        <!-- My Drones -->
+                        <div class="data-panel">
+                            <div class="panel-header"><span class="panel-title">МОИ БАС</span></div>
+                            <div class="panel-body">
+                                <table class="data-table" id="my-drones-table"><thead><tr><th>Рег.№</th><th>Модель</th><th>Производитель</th><th>Зона</th><th>Статус</th></tr></thead><tbody id="my-drones-tbody"></tbody></table>
+                                <div class="empty-state" id="my-drones-empty">Нет зарегистрированных БАС</div>
+                            </div>
+                        </div>
+                        <!-- Flight History -->
+                        <div class="data-panel">
+                            <div class="panel-header"><span class="panel-title">ИСТОРИЯ ПОЛЁТОВ</span></div>
+                            <div class="panel-body">
+                                <table class="data-table" id="history-table"><thead><tr><th>№ Брони</th><th>Зона</th><th>Дата</th><th>Статус</th></tr></thead><tbody id="history-tbody"></tbody></table>
+                                <div class="empty-state" id="history-empty">Нет бронирований</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== REGISTRY (MY DRONES) ==================== -->
+            <section id="page-registry" class="page">
+                <div class="section-title-bar">
+                    <h2>РЕЕСТР БЕСПИЛОТНЫХ АВИАЦИОННЫХ СИСТЕМ</h2>
+                    <button class="action-btn" id="btn-register-drone">+ Зарегистрировать БАС</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="registry-table">
+                        <thead><tr><th>Рег.№</th><th>Модель</th><th>Производитель</th><th>S/N</th><th>Категория</th><th>МВЗМ, кг</th><th>Зона</th><th>Статус</th></tr></thead>
+                        <tbody id="registry-tbody"></tbody>
+                    </table>
+                    <div class="empty-state hidden" id="registry-empty">Нет зарегистрированных БАС. Нажмите «+ Зарегистрировать БАС».</div>
+                </div>
+                <!-- Register Drone Modal -->
+                <div class="modal-overlay hidden" id="modal-drone">
+                    <div class="modal">
+                        <div class="modal-head"><span>РЕГИСТРАЦИЯ БАС</span><button class="modal-close-btn" data-close="modal-drone">&times;</button></div>
+                        <div class="modal-content">
+                            <form id="drone-form">
+                                <div class="form-grid">
+                                    <div class="form-field"><label>Производитель *</label><input type="text" id="dr-manufacturer" class="form-control" required></div>
+                                    <div class="form-field"><label>Модель *</label><input type="text" id="dr-model" class="form-control" required></div>
+                                    <div class="form-field"><label>S/N *</label><input type="text" id="dr-serial" class="form-control" required></div>
+                                    <div class="form-field"><label>МВЗМ, кг *</label><input type="number" id="dr-weight" step="0.01" class="form-control" required></div>
+                                    <div class="form-field"><label>Категория *</label><select id="dr-category" class="form-control" required><option value="">—</option></select></div>
+                                    <div class="form-field"><label>Разрешённая зона *</label><select id="dr-zone" class="form-control" required><option value="">—</option></select></div>
+                                </div>
+                                <div class="form-actions"><button type="submit" class="action-btn">Зарегистрировать</button><button type="button" class="cancel-btn" data-close="modal-drone">Отмена</button></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== BOOKINGS LIST ==================== -->
+            <section id="page-bookings-list" class="page">
+                <div class="section-title-bar"><h2>МОИ БРОНИРОВАНИЯ</h2></div>
+                <div class="table-container">
+                    <table class="data-table" id="bookings-table">
+                        <thead><tr><th>№</th><th>Зона</th><th>Борт</th><th>Начало</th><th>Конец</th><th>Цель</th><th>Статус</th><th></th></tr></thead>
+                        <tbody id="bookings-tbody"></tbody>
+                    </table>
+                    <div class="empty-state hidden" id="bookings-empty">Нет бронирований. Перейдите в Дашборд для бронирования.</div>
+                </div>
+            </section>
+
+            <!-- ==================== EXAM ==================== -->
+            <section id="page-exam" class="page">
+                <div class="section-title-bar"><h2>СЕРТИФИКАЦИЯ ОПЕРАТОРА БАС</h2></div>
+
+                <!-- Exam Selection -->
+                <div id="exam-select" class="exam-select-grid"></div>
+
+                <!-- Exam In Progress -->
+                <div id="exam-session" class="hidden">
+                    <div class="exam-header">
+                        <div class="exam-info">
+                            <span class="mono" id="exam-id-display">—</span>
+                            <span id="exam-cat-display">—</span>
+                        </div>
+                        <div class="exam-timer">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span id="exam-timer-display" class="mono">00:00</span>
+                        </div>
+                        <div class="proctoring-status">
+                            <span class="sb-dot sb-green" id="proctor-dot"></span>
+                            <span id="proctor-status-text">Прокторинг: ОК</span>
+                        </div>
+                    </div>
+                    <div class="exam-progress"><div class="exam-progress-fill" id="exam-progress-fill"></div></div>
+                    <div id="exam-question-area"></div>
+                    <div class="exam-nav">
+                        <button class="secondary-btn" id="btn-prev-q" disabled>← Назад</button>
+                        <span id="exam-q-counter" class="mono">1 / 30</span>
+                        <button class="action-btn" id="btn-next-q">Далее →</button>
+                        <button class="action-btn danger-btn hidden" id="btn-finish-exam">Завершить экзамен</button>
+                    </div>
+                    <!-- Proctoring warnings -->
+                    <div id="proctor-warnings" class="proctor-warnings"></div>
+                </div>
+
+                <!-- Exam Result -->
+                <div id="exam-result" class="hidden">
+                    <div class="exam-result-card" id="exam-result-card"></div>
+                </div>
+            </section>
+
+            <!-- ==================== ADMIN ==================== -->
+            <section id="page-admin" class="page">
+                <div class="section-title-bar">
+                    <h2>АДМИНИСТРИРОВАНИЕ — ГОСУДАРСТВЕННЫЕ БРОНИ</h2>
+                    <button class="action-btn" id="btn-add-gov-res">+ Гос. бронь</button>
+                </div>
+                <div class="admin-grid">
+                    <div class="data-panel">
+                        <div class="panel-header"><span class="panel-title">АКТИВНЫЕ ГОС. БРОНИРОВАНИЯ</span></div>
+                        <div class="panel-body">
+                            <table class="data-table" id="gov-table"><thead><tr><th>ID</th><th>Зона</th><th>Ведомство</th><th>Начало</th><th>Конец</th><th>Причина</th><th></th></tr></thead><tbody id="gov-tbody"></tbody></table>
+                            <div class="empty-state" id="gov-empty">Нет гос. бронирований</div>
+                        </div>
+                    </div>
+                    <div class="data-panel">
+                        <div class="panel-header"><span class="panel-title">ВСЕ ОПЕРАТОРЫ</span></div>
+                        <div class="panel-body">
+                            <table class="data-table" id="all-operators-table"><thead><tr><th>ID</th><th>ФИО</th><th>Email</th><th>Гражданство</th><th>Регистрация</th></tr></thead><tbody id="all-operators-tbody"></tbody></table>
+                        </div>
+                    </div>
+                    <div class="data-panel">
+                        <div class="panel-header"><span class="panel-title">ЖУРНАЛ СОБЫТИЙ</span></div>
+                        <div class="panel-body"><table class="data-table" id="events-table"><thead><tr><th>Время</th><th>Тип</th><th>Описание</th></tr></thead><tbody id="events-tbody"></tbody></table></div>
+                    </div>
+                </div>
+                <!-- Gov Reservation Modal -->
+                <div class="modal-overlay hidden" id="modal-gov">
+                    <div class="modal">
+                        <div class="modal-head"><span>ГОСУДАРСТВЕННАЯ БРОНЬ</span><button class="modal-close-btn" data-close="modal-gov">&times;</button></div>
+                        <div class="modal-content">
+                            <form id="gov-form">
+                                <div class="form-grid">
+                                    <div class="form-field"><label>Зона *</label><select id="gov-zone" class="form-control" required><option value="">—</option></select></div>
+                                    <div class="form-field"><label>Ведомство *</label><input type="text" id="gov-agency" class="form-control" required placeholder="МО РК"></div>
+                                    <div class="form-field"><label>Начало *</label><input type="datetime-local" id="gov-start" class="form-control" required></div>
+                                    <div class="form-field"><label>Конец *</label><input type="datetime-local" id="gov-end" class="form-control" required></div>
+                                </div>
+                                <div class="form-field"><label>Причина</label><input type="text" id="gov-reason" class="form-control" placeholder="Учения / ограничения"></div>
+                                <div class="form-actions"><button type="submit" class="action-btn">Создать бронь</button><button type="button" class="cancel-btn" data-close="modal-gov">Отмена</button></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Status Bar -->
+        <footer id="status-bar">
+            <div class="sb-item"><span class="sb-dot sb-green"></span><span>СИСТЕМА: НОРМА</span></div>
+            <div class="sb-item"><span class="sb-dot sb-green"></span><span>ХРАНИЛИЩЕ: ЛОКАЛЬНОЕ</span></div>
+            <div class="sb-item sb-time"><span id="server-time">—</span></div>
+            <div class="sb-item">v<span id="sb-version">—</span></div>
+            <div class="sb-item sb-right">ГОСТ Р 34.12-2015 | AES-256</div>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="config.js?v=4.3"></script>
+    <script src="api.js?v=4.3"></script>
+    <script src="state.js?v=4.3"></script>
+    <script src="airmap.js?v=4.3"></script>
+    <script src="sigex-client.js?v=4.3"></script>
+    <script src="ncalayer.js?v=4.3"></script>
+    <script src="egov.js?v=4.3"></script>
+    <script src="app.js?v=4.3"></script>
+</body>
+</html>
